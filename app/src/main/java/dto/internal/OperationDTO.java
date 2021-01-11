@@ -2,13 +2,8 @@ package dto.internal;
 
 import java.util.List;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
-
-@Document("Operation")
 public class OperationDTO {
 
-	@Id
 	public String id;
 	
 	public List<String> idFireFighter;

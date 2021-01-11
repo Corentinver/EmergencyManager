@@ -1,8 +1,5 @@
 package dto.internal;
 
-import org.springframework.data.mongodb.core.mapping.Document;
-
-@Document("J_TVehicle_TFire")
 public class J_TVehicle_TFireDTO {
 
 	public String idVehicleType;
