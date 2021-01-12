@@ -55,5 +55,10 @@ public class ResourceService {
         return Arrays.asList(responseEntity.getBody());
     }
 
+    public FireStationInfosDTO getFireStationInfo(){
+        ResponseEntity<FireStationInfosDTO> responseEntity = restTemplate.getForEntity("http://localhost:8080/informationsFireStation", FireStationInfosDTO.class);
+        return responseEntity.getBody();
+    }
+
     
 }
