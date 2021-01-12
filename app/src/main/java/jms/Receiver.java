@@ -5,13 +5,13 @@ import org.springframework.jms.annotation.JmsListener;
 import org.springframework.stereotype.Component;
 
 import dto.internal.FireDTO;
-import manager.ManagerOperation;
+import manager.ManagerRessources;
 
 @Component
 public class Receiver {
 
   @Autowired
-  public ManagerOperation managerOperation;
+  public ManagerRessources managerRessources;
   
   @JmsListener(destination = "queue.fire")
   public void receiveFire(FireDTO fire) {
