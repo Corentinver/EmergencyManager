@@ -15,7 +15,7 @@ public class Receiver {
   
   @JmsListener(destination = "queue.fire")
   public void receiveFire(FireDTO fire) {
-    managerOperation.receiveNewFire(fire);
+    managerRessources.receiveNewFire(fire);
   }
 
 }
