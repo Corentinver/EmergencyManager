@@ -67,16 +67,13 @@ public class ManagerRessources {
         sortedDuration.putAll(resourceService.getMapFireStationByDistance(fire.location));
         while(ressourceToConsume != 0){
             FireStationResourcesDTO fireStationResources = resourceService.getFireStationResourcesAvailable(sortedDuration.firstEntry().getValue());
-            System.out.println(fireStationResources.idFireFighters);
-            System.out.println(fireStationResources.vehicles);
             if(fireStationResources.hasRessources()){
-                System.out.println(fireStationResources.id);
-                System.out.println(ressourceToConsume);
                 while(fireStationResources.hasRessources() && ressourceToConsume != 0){
                     for(String tag: tags){
                         Optional<VehicleDTO> veh = fireStationResources.vehicles.stream().filter(ve -> ve.idType.equals(tag)).findFirst();
                         if(veh.isPresent()){
                             vehicleSend.add(veh.get().id);
+                            System.out.println("IdFireFighter : " + fireStationResources.idFireFighters);
                             fireFighterSend.add(fireStationResources.idFireFighters.get(0));
                             fireStationResources.vehicles.remove(veh.get());
                             fireStationResources.idFireFighters.remove(fireStationResources.idFireFighters.get(0));
