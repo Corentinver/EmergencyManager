@@ -3,10 +3,14 @@ package manager;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
@@ -57,25 +61,42 @@ public class ManagerRessources {
     }
 
     public void receiveNewFire(FireDTO fire) throws IOException {
+        
         fires.put(fire.id, fire);
         int ressourceToConsume = ressourceToConsume(fire);
         List<String> vehicleSend = new ArrayList<>();
         List<String> fireFighterSend = new ArrayList<>();
         List<String> tags = vehicleTagsByTypeFire(fire);
 
-        TreeMap<Double, String> sortedDuration = new TreeMap<>();
-        sortedDuration.putAll(resourceService.getMapFireStationByDistance(fire.location));
+        HashMap<Double, String> hashMap = new HashMap<Double, String>();
+        hashMap = resourceService.getMapFireStationByDistance(fire.location);
+        List<Double> sortedKeys = new ArrayList<>(hashMap.keySet());
+        /*for(Set<Double> key : hashMap.keySet()){
+            sortedKeys.add(key.);
+        }*/
+
+        
+        Collections.sort(sortedKeys);
+        //System.out.println(sortedKeys);
         while(ressourceToConsume != 0){
-            FireStationResourcesDTO fireStationResources = resourceService.getFireStationResourcesAvailable(sortedDuration.firstEntry().getValue());
+            FireStationResourcesDTO fireStationResources = resourceService.getFireStationResourcesAvailable(hashMap.get(sortedKeys.get(0)));
             if(fireStationResources.hasRessources()){
                 while(fireStationResources.hasRessources() && ressourceToConsume != 0){
                     for(String tag: tags){
                         Optional<VehicleDTO> veh = fireStationResources.vehicles.stream().filter(ve -> ve.idType.equals(tag)).findFirst();
+                        if(!fireStationResources.hasRessources()){
+                            hashMap.remove(hashMap.get(sortedKeys.get(0)));
+                            fireStationResources = resourceService.getFireStationResourcesAvailable(hashMap.get(sortedKeys.get(0)));
+                            veh = fireStationResources.vehicles.stream().filter(ve -> ve.idType.equals(tag)).findFirst();
+                        }
                         if(veh.isPresent()){
                             vehicleSend.add(veh.get().id);
-                            System.out.println("IdFireFighter : " + fireStationResources.idFireFighters);
+                            //System.out.println("IdFireStation : " + fireStationResources.id);
+                            //System.out.println("IdFireFighter : " + fireStationResources.idFireFighters);
                             fireFighterSend.add(fireStationResources.idFireFighters.get(0));
+                            fireFighterSend.add(fireStationResources.idFireFighters.get(1));
                             fireStationResources.vehicles.remove(veh.get());
+                            fireStationResources.idFireFighters.remove(fireStationResources.idFireFighters.get(0));
                             fireStationResources.idFireFighters.remove(fireStationResources.idFireFighters.get(0));
                         }
                     }
@@ -111,4 +132,6 @@ public class ManagerRessources {
 
         return tags;
     }
+
+    
 }
