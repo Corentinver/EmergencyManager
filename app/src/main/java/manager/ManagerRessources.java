@@ -1,5 +1,6 @@
 package manager;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -24,70 +25,61 @@ import services.ResourceService;
 @Component
 public class ManagerRessources {
 
-    private List<FireDTO> fires;
+    private Map<String,FireDTO> fires;
 
-	private List<FireStationDTO> fireStations;
+    private List<FireStationDTO> fireStations;
 
-	private List<FireFighterDTO> fireFighters;
+    private List<FireFighterDTO> fireFighters;
 
-	private List<VehicleDTO> vehicles;
+    private List<VehicleDTO> vehicles;
 
     private List<TypeFireDTO> typeFires;
 
     private List<J_TVehicle_TFireDTO> tVehicle_TFire;
-    
+
     @Autowired
     private ResourceService resourceService;
 
     @Autowired
     public JmsTemplate jmsTemplate;
-    
+
     @Autowired
-	public Queue queueOperation;
+    public Queue queueOperation;
 
     private ManagerRessources() {
+        System.out.println("loaded");
         resourceService = new ResourceService();
-        fires = new ArrayList<FireDTO>();
+        //fires = resourceService.unmanagedFire();
+        fires = new HashMap();
         fireStations = resourceService.getAllFireStation();
-        fireFighters = resourceService.getAllFireFighter();
-        vehicles = resourceService.getAllVehicle();
         typeFires = resourceService.getAllTypeFire();
         tVehicle_TFire = resourceService.getAllTVehicle_TFire();
     }
 
-    public void receiveNewFire(FireDTO fire){
-        Map<Double, String> fireStationMap = new HashMap<Double, String>();
-        for(FireStationDTO f : fireStations){
-
-            double distance = PointDTO.getDistance(f.location, fire.location);
-            fireStationMap.put(distance, f.id);
-        }
-        
+    public void receiveNewFire(FireDTO fire) throws IOException {
+        fires.put(fire.id, fire);
         int ressourceToConsume = ressourceToConsume(fire);
         List<String> vehicleSend = new ArrayList<>();
         List<String> fireFighterSend = new ArrayList<>();
         List<String> tags = vehicleTagsByTypeFire(fire);
-        System.out.println(tags);
-        TreeMap<Double, String> sortedDistance = new TreeMap<>();
-        sortedDistance.putAll(fireStationMap);
+
+        TreeMap<Double, String> sortedDuration = new TreeMap<>();
+        sortedDuration.putAll(resourceService.getMapFireStationByDistance(fire.location));
         while(ressourceToConsume != 0){
-            Optional<FireStationDTO> station = fireStations.stream().filter(st -> sortedDistance.firstEntry().getValue().equals(st.id)).findAny();
-            if(station.isPresent()){
-                System.out.println(station.get());
-                List<VehicleDTO> filterVehicle = vehicles.stream().filter(ve -> (station.get().id.equals(ve.idFireStation))).collect(Collectors.toList());
-                List<FireFighterDTO> filterFireFighter = fireFighters.stream().filter(fe -> (station.get().id.equals(fe.idFireStation))).collect(Collectors.toList());
-                System.out.println(filterVehicle);
+            FireStationResourcesDTO fireStationResources = resourceService.getFireStationResourcesAvailable(sortedDuration.firstEntry().getValue());
+            System.out.println(fireStationResources.idFireFighters);
+            System.out.println(fireStationResources.vehicles);
+            if(fireStationResources.hasRessources()){
+                System.out.println(fireStationResources.id);
                 System.out.println(ressourceToConsume);
-                while(ressourceToConsume != 0 || (filterVehicle.size() == 0 && filterFireFighter.size() == 0)){
+                while(fireStationResources.hasRessources() && ressourceToConsume != 0){
                     for(String tag: tags){
-                        Optional<VehicleDTO> veh = filterVehicle.stream().filter(ve -> ve.idType.equals(tag)).findFirst();
+                        Optional<VehicleDTO> veh = fireStationResources.vehicles.stream().filter(ve -> ve.idType.equals(tag)).findFirst();
                         if(veh.isPresent()){
                             vehicleSend.add(veh.get().id);
-                            fireFighterSend.add(filterFireFighter.get(0).id);
-                            //vehicles.remove(veh.get());
-                            //filterVehicle.remove(veh.get());
-                            //fireFighters.remove(filterFireFighter.get(0));
-                            //filterFireFighter.remove(filterFireFighter.get(0));
+                            fireFighterSend.add(fireStationResources.idFireFighters.get(0));
+                            fireStationResources.vehicles.remove(veh.get());
+                            fireStationResources.idFireFighters.remove(fireStationResources.idFireFighters.get(0));
                         }
                     }
                     ressourceToConsume--;
@@ -101,6 +93,10 @@ public class ManagerRessources {
         op.setIdVehicle(vehicleSend);
         op.setLocation(fire.getLocation());
         jmsTemplate.convertAndSend(queueOperation, op);
+    }
+
+    public void receiveUpdateFire(FireDTO fire){
+
     }
 
     public int ressourceToConsume(FireDTO fire){
